@@ -2629,6 +2629,10 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
                         createWebViewWith configuration: WKWebViewConfiguration,
                   for navigationAction: WKNavigationAction,
                   windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if #available(iOS 15.0, *) {
+            configuration.mediaCapturePermissionGrantPolicy = .grantIfSameOrigin
+        }
+        configuration.allowsInlineMediaPlayback = true
         
         var windowId: Int64 = 0
         let inAppWebViewManager = plugin?.inAppWebViewManager
@@ -2638,6 +2642,9 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
         }
         
         let windowWebView = InAppWebView(id: nil, plugin: nil, frame: self.bounds, configuration: configuration, contextMenu: nil)
+        if #available(iOS 15.0, *) {
+            windowWebView.uiDelegate = HarkWebViewDelegate.shared
+        }
         windowWebView.windowId = windowId
 
         let webViewTransport = WebViewTransport(
