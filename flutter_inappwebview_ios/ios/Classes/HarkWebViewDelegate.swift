@@ -13,8 +13,8 @@ class HarkWebViewDelegate: NSObject, WKUIDelegate {
                  type: WKMediaCaptureType,
                  decisionHandler: @escaping (WKPermissionDecision) -> Void) {
 
-        let allowed = origin.host == "litter-robot.com" ||
-                      origin.host?.hasSuffix("app.sendhark.com") == true
+        let allowed = origin.host.hasSuffix("app.sendhark.com")
+                      || origin.host == "litter-robot.com"
 
         decisionHandler(allowed ? .grant : .deny)
     }
