@@ -2629,10 +2629,11 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
                         createWebViewWith configuration: WKWebViewConfiguration,
                   for navigationAction: WKNavigationAction,
                   windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if #available(iOS 15.0, *) {
-            configuration.mediaCapturePermissionGrantPolicy = .grantIfSameOrigin
-        }
         configuration.allowsInlineMediaPlayback = true
+
+        if #available(iOS 15.0, *) {
+            configuration.mediaCapturePermissionGrantPolicy = WKWebViewConfiguration.MediaCapturePermissionGrantPolicy.grantIfSameOrigin
+        }
         
         var windowId: Int64 = 0
         let inAppWebViewManager = plugin?.inAppWebViewManager
