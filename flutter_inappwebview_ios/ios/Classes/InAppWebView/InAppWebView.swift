@@ -2625,27 +2625,39 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
         }
     }
     
-    public func webView(_ webView: WKWebView,
-                        createWebViewWith configuration: WKWebViewConfiguration,
-                  for navigationAction: WKNavigationAction,
-                  windowFeatures: WKWindowFeatures) -> WKWebView? {
-        configuration.allowsInlineMediaPlayback = true
-
-        if #available(iOS 15.0, *) {
-            configuration.mediaCapturePermissionGrantPolicy = WKWebViewConfiguration.MediaCapturePermissionGrantPolicy.grantIfSameOrigin
-        }
+    public func webView(
+        _ webView: WKWebView,
+        createWebViewWith configuration: WKWebViewConfiguration,
+        for navigationAction: WKNavigationAction,
+        windowFeatures: WKWindowFeatures
+    ) -> WKWebView? {
         
+        // ✅ Supported properties only
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+
+        // Set a unique window ID for tracking
         var windowId: Int64 = 0
         let inAppWebViewManager = plugin?.inAppWebViewManager
         if let inAppWebViewManager = inAppWebViewManager {
             inAppWebViewManager.windowAutoincrementId += 1
             windowId = inAppWebViewManager.windowAutoincrementId
         }
+
+        // Create new InAppWebView instance with updated config
+        let windowWebView = InAppWebView(
+            id: nil,
+            plugin: nil,
+            frame: self.bounds,
+            configuration: configuration,
+            contextMenu: nil
+        )
         
-        let windowWebView = InAppWebView(id: nil, plugin: nil, frame: self.bounds, configuration: configuration, contextMenu: nil)
+        // Optional: assign custom UI delegate if needed
         if #available(iOS 15.0, *) {
             windowWebView.uiDelegate = HarkWebViewDelegate.shared
         }
+
         windowWebView.windowId = windowId
 
         let webViewTransport = WebViewTransport(
@@ -2654,32 +2666,43 @@ public class InAppWebView: WKWebView, UIScrollViewDelegate, WKUIDelegate,
         )
 
         inAppWebViewManager?.windowWebViews[windowId] = webViewTransport
-        
-        let createWindowAction = CreateWindowAction(navigationAction: navigationAction, windowId: windowId, windowFeatures: windowFeatures, isDialog: nil)
-        
+
+        let createWindowAction = CreateWindowAction(
+            navigationAction: navigationAction,
+            windowId: windowId,
+            windowFeatures: windowFeatures,
+            isDialog: nil
+        )
+
         let callback = WebViewChannelDelegate.CreateWindowCallback()
-        callback.nonNullSuccess = { (handledByClient: Bool) in
+        callback.nonNullSuccess = { handledByClient in
             return !handledByClient
         }
-        callback.defaultBehaviour = { [weak self] (handledByClient: Bool?) in
+
+        callback.defaultBehaviour = { [weak self] handledByClient in
             if inAppWebViewManager?.windowWebViews[windowId] != nil {
                 inAppWebViewManager?.windowWebViews.removeValue(forKey: windowId)
             }
             self?.loadUrl(urlRequest: navigationAction.request, allowingReadAccessTo: nil)
         }
-        callback.error = { [weak callback] (code: String, message: String?, details: Any?) in
-            print(code + ", " + (message ?? ""))
+
+        callback.error = { [weak callback] code, message, details in
+            print("\(code), \(message ?? "")")
             callback?.defaultBehaviour(nil)
         }
-        
+
         if let channelDelegate = channelDelegate {
-            channelDelegate.onCreateWindow(createWindowAction: createWindowAction, callback: callback)
+            channelDelegate.onCreateWindow(
+                createWindowAction: createWindowAction,
+                callback: callback
+            )
         } else {
             callback.defaultBehaviour(nil)
         }
-        
+
         return windowWebView
     }
+
     
     public func webView(_ webView: WKWebView,
                         authenticationChallenge challenge: URLAuthenticationChallenge,
